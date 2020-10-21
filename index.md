@@ -1,10 +1,5 @@
 
 ------------------------------------------------------------------------
-
-<style>
-body {text-align: justify}
-</style>
-
 R est un langage et un environnement logiciel libre, gratuit et
 multiplateforme (Linux, Windows, Mac) initialement dédié aux calculs
 statistiques.
