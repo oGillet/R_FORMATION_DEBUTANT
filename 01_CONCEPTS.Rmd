@@ -1,0 +1,386 @@
+---
+title: "R et ses concepts"
+author: "Marion Le Texier"
+output:
+  md_document:
+    variant: markdown_github
+---
+
+# ```{r, echo=FALSE}
+# htmltools::img(src = knitr::image_uri("images/logo_cahiers.png"), 
+#                alt = 'logo', 
+#                style = 'position:absolute; top:0; right:0; padding:10px;height:120px')
+# ```
+
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+<style>
+body {text-align: justify}
+</style>
+
+R est un langage et un environnement logiciel libre, gratuit et multiplateforme (Linux, Windows, Mac) initialement dédié aux calculs statistiques.
+
+Depuis sa création en 1993 par Robert Gentleman et Ross Ihaka, de l'Université d'Aukland, le logiciel-langage a été étendu à un large domaine d'applications.
+
+Au fur et à mesure des années, R est devenu un outil incontournable pour le traitement exploratoire et statistique des données [(cf. article du New York Times datant de 2009 sur le sujet)](http://www.nytimes.com/2009/01/07/technology/business-computing/07program.html?_r=0).
+
+La particularité du logiciel-langage R tient notamment dans sa polyvalence : au-delà des méthodes d'analyses statistiques, il permet par exemple la réalisation d'analyses spatiales et cartographiques poussées et leur intégration dans une même chaîne de travail.  
+
+R est composé d'un socle commun (r-base) sur lequel se greffe un ensemble de *packages*, aussi appelés *libraries* (bibliothèques en français), développés par les utilisateurs eux-mêmes.
+
+R fait donc appel à un ensemble de bibliothèques de fonctions, plus ou moins généralistes ou spécialisées, qui s'organisent de façon modulaire (c'est à dire qu'un package dépend de fonctions implémentées dans d'autres packages).
+
+A noter que comme pour tout langage, les pratiques d'utilisation de R peuvent varier d'un individu à un autre (expressions favorites, lacunes, omission). Ceci est notamment dû au fait que chaque utilisateur peut développer ses propres fonctions et bibliothèques de fonctions. Il existe par exemple plusieurs manières de réaliser un histogramme, une analyse en composante principale, une carte, etc. 
+
+Les scripts proposés dans cette formation, bien que se voulant le plus généraliste et simple possible, auraient donc pu être écrits de façon quelque peu différente par un autre programmateur.
+
+# Environnement de développement
+
+![](images/RSTUDIO.png)
+
+# Premiers pas avec R 
+
+````{r include = TRUE, eval = FALSE}
+
+# Entrer une valeur positive
+25
+
+# Entrer une valeur négative
+- 25
+
+# Entrer une valeur décimale (attention il faut utiliser le point et non la virgule!)
+25.5
+
+# Additionner
+25+25
+
+# Soustraire
+25-25
+
+# Multiplier
+25*2
+
+# Diviser
+25/2
+
+# Obtenir le reste d'une division (modulo: 25 = (5*5)  ; 26 = (5*5) + 1)
+25 %% 5
+26 %% 5
+
+# Obtenir la partie entière d'une division
+26 %/% 5
+
+# Utiliser une puissance / un exposant
+5^2
+
+# Calculer la racine d'un nombre
+sqrt(25)
+
+# Combiner plusieurs opérateurs
+(2+3)*(7-2)
+
+```
+
+# Créer, afficher, supprimer 
+
+```{r include = TRUE, eval = FALSE}
+
+# Créer une variable
+a <- 4
+b <- 2
+c <- 25
+
+# Afficher son contenu
+a
+
+# Transformer son contenu (assigner une nouvelle valeur et écraser la précédente)
+a <- 5
+
+# Utiliser des variables dans un calcul mathématique
+a^b == c
+
+# Supprimer une variable
+rm(a)
+
+```
+
+Attention, le bon usage d'un code dépend de sa lisibilité. Selon les langages, différentes règles et conventions d'écriture sont donc définies et utilisées par les développeurs et la communauté d'utilisateurs afin d'en faciliter l'usage et de favoriser l'échange et la coopération. 
+
+La nomination des objets dans R est donc contrainte par un certain nombre de règles et bonnes pratiques :  
+
+* le nom d'un objet doit impérativement commencer par une lettre (on ne peut donc pas écrire "4nb <- 4" ni "-nb4 <- 4", mais "nb4 <- 4" ou "nb-4 <- 4") ;
+
+* le nom des objets doit tenir compte de leur casse, c'est à dire que le langage R distingue les minuscules des majuscules (a n'est donc pas identique à A) ;
+
+* le nom des objets ne peut contenir un espace ni un trait d'union (par exemple, le code "nb 4 <- 4" ou "nb-4 <- 4" ne peut être exécuté dans R, alors que le code "nb_4 <- 4 peut l'être") ;
+
+* il faut éviter de donner un nom d'objet déjà utilisé par le langage R. Par exemple, le nom "sqrt" ne doit pas être utilisé pour nommer une variable puisqu'il désigne déjà la fonction racine ;
+* enfin, on préfèrera utiliser des dénominations s'apparentant à l'anglais afin de se rapprocher au mieux de la langue d'écriture des fonctions et objets du logiciel-langage (par exemple, le nom "MyObject" sera à préférer à celui de "MonObjet").
+
+# Les opérateurs  
+
+````{r include = TRUE, eval = FALSE}
+
+# Réaliser des tests d'égalité
+5^2 == 25
+5^2 == 26
+5^2 != 26
+
+# Réaliser des tests de grandeur
+5^2 < 26
+5^2 <= 25
+5^2 > 24
+5^2 >= 25
+
+```
+
+**- Opérateurs mathématiques**  
+
+> \+ &nbsp; &nbsp; &nbsp; - &nbsp; &nbsp; &nbsp; * &nbsp; &nbsp; &nbsp; / &nbsp; &nbsp; &nbsp; %/% &nbsp; &nbsp; &nbsp; %% &nbsp; &nbsp; &nbsp; ^  
+
+**- Opérateurs logiques**                            
+
+> & &nbsp; &nbsp; &nbsp; | &nbsp; &nbsp; &nbsp; ! 
+
+**- Opérateurs de comparaison**  
+
+> == &nbsp; &nbsp; &nbsp; != &nbsp; &nbsp; &nbsp; > &nbsp; &nbsp; &nbsp; >= &nbsp; &nbsp; &nbsp; < &nbsp; &nbsp; &nbsp; <=
+
+**- Opérateurs pour définir une variable**  
+
+
+> = &nbsp; &nbsp; &nbsp; <-
+
+# Les objets 
+
+Il existe une grande diversité de types d'objets que l'on peut créer et manipuler sous R. Ceux-ci varient selon les *packages* et les fonctions utilisés.
+
+Les objets créés sont affichés dans la fenêtre Environnement de RStudio, et classés en fonction de leur type. Selon les objets, un certain nombre d'informations descriptives sont également visibles.
+
+**1 - Les vecteurs**
+
+Parmi les objets les plus utilisés pour le stockage et la structuration des données, on trouve le vecteur. Il peut s'utiliser pour assigner une valeur unique à un objet, comme nous l'avons fait précédemment, ou une suite de valeurs grâce à l'usage de la fonction **c()** (pour *combine*).
+
+
+```{r include = TRUE, eval = FALSE}
+
+# Vecteurs de valeurs numériques
+v1 <- 4
+v2 <- c(4, 3, 2, 1)
+v3 <- c(4.1, 3.1, 2.1, 1.1)
+
+# Vecteur de valeurs alphanumériques (caractères)
+v4 <- c("Hello", "Bonjour", "Hola", "Hallo") 
+
+# Vecteur de valeurs booléennes (TRUE/FALSE)
+v5 <- c(2==3, "Hello"=="World", "Hello"=="Hello", "Hola"=="Hallo")
+
+# Connaître la valeur d'un élément du vecteur en fonction de sa position (indexation)  
+# nom du vecteur[position] (commence à 1)
+v5[1]
+v5[3]
+v5[100] 
+# NA signifie "not available", 
+# et permet d'identifier des valeurs manquantes ou inexistantes
+
+# [a:b] : renvoie les éléments de a à b inclus
+v5[1:3]
+
+# Combinaison de vecteurs
+v6 <- c(v2,v3)
+
+```
+
+**2 - Les tableaux de données**
+
+Il est également possible de combiner un ensemble de vecteurs dans un *data.frame* (tableau de données), à condition que ces derniers soient de même taille! Chaque vecteur introduit dans la base de données correspond désormais à une colonne (variable). Le nombre de lignes (individus) du tableau est défini par la taille des vecteurs. 
+
+```{r include = TRUE, eval = FALSE}
+
+# Création d'un tableau de données par combinaison de vecteurs
+myTab <- data.frame(v2,v3,v4,v5)
+
+# Valeur prise par l'individu 1 pour la variable 2
+myTab[1,2]
+
+# Valeurs prises par l'individu 1 pour l'ensemble des variables
+myTab[1, ]
+
+# Valeurs prises par l'ensemble des individus pour la variable 1
+myTab[ ,1]
+
+# Valeurs prises par les individus 1 à 3 pour la variable 1
+myTab[1:3,1]
+
+# Appel d'une fonction pour afficher le début du tableau
+head(myTab, n=3)
+
+
+```
+
+```{r echo=FALSE,results = "asis"}
+
+v2 <- c(4, 3, 2, 1)
+v3 <- c(4.1, 3.1, 2.1, 1.1)
+
+# Vecteur de valeurs alphanumériques (caractères)
+v4 <- c("Hello", "Bonjour", "Hola", "Hallo") 
+
+# Vecteur de valeurs booléennes (TRUE/FALSE)
+v5 <- c(2==3, "Hello"=="World", "Hello"=="Hello", "Hola"=="Hallo")
+myTab <- data.frame(v2,v3, v4,v5)
+
+knitr::kable(head(myTab,n=3), caption = "")
+
+```
+
+# Les fonctions 
+
+Dans R, une fonction correspond à un type particulier d'objet qui prend des arguments et retourne un résultat. 
+
+Il existe de nombreuses fonctions dédiées à la description de vecteurs et de tableaux de données.
+
+```{r include = TRUE, eval = FALSE}
+
+# Fonction calculant la longueur d'un vecteur
+length(v3)
+
+# Fonction calculant le nombre de lignes d'un tableau
+nrow(myTab)
+
+# Fonction calculant le nombre de colonnes d'un tableau
+ncol(myTab)
+
+# Fonction permettant de connaître le type d'un objet
+class(myTab)
+class(v3)
+
+# Fonction décrivant le contenu d'un objet
+str(myTab)
+str(v3)
+
+# Fonction résumant le contenu d'un objet
+summary(myTab)
+summary(v3)
+
+# Transformation d'un objet numérique en objet alphanumérique 
+# (chaîne de caractères sur laquelle il est impossible de réaliser des opérations mathématiques) 
+v1 <- as.character(v1)
+
+# Transformation d'un objet alphanumérique en objet numérique
+v1 <- as.numeric(v1)
+
+# Appel d'une fonction pour afficher le début du tableau
+head(myTab, n=3)
+```
+
+Une fonction a un ou plusieurs paramètres en entrée et retourne un résultat. Les paramètres de fonction sont soit obligatoires soit optionnels.  
+
+Il y a deux manières de demander de l'aide sur une fonction : on peut directement l'écrire dans la console ou bien utiliser l'interface *Help* située dans la fenêtre en bas à droit de RStudio (taper le nom de la fonction dans l'onglet recherche).
+
+```{r include = TRUE, eval = FALSE}
+
+# Affichage de l'aide sur une fonction
+help("sum")
+?sum
+
+```
+
+[Le *Comprehensive R Archive Network*](https://cran.r-project.org/) regroupe également les archives de la liste d'utilisateurs R. Outre les descriptions de fonctions et *packages*, on y trouve une foire aux questions.
+
+D'autre part, la communauté d'utilisateurs de R est très active sur Internet. Il est très probable que la réponse à la question que vous vous posez se trouve [ici](https://www.r-bloggers.com/) ou [là](http://stackoverflow.com/). Attention, avant de poser votre question sur l'un ou l'autre de ces sites, vérifiez que celle-ci n'a pas déjà été posée par un autre utilisateur! Une recherche assidue sur un moteur de recherche vous permettra certainement de résoudre votre problème. 
+
+Le langage véhiculaire de la communauté est l'anglais. Il est donc plus que recommander de rédiger vos recherches et questions dans cette langue.
+
+# Les packages
+
+Packages nécessaires pour cette formation :  
+ 
+```{r, eval=FALSE}
+#Packages pour manipuler des données et réaliser des traitements statistiques  
+c("ggplot2","dplyr","tidyr","reshape","plotly")
+
+# Packages pour réaliser des affichages cartographiques
+c("sf","osmdata","leaflet","mapview")
+```
+
+Procédure pour installer et charger des librairies   
+
+```{r, eval=FALSE}
+
+#Intaller des packages
+install.packages('ggplot2')
+
+#Charger les librairies 
+library("ggplot2")
+library("leaflet")
+library("sf")
+
+#Charger plusieurs librairies
+libs <- c("ggplot2","dplyr","tidyr","reshape","plotly","sf","osmdata","leaflet","mapview")
+lapply(libs, require, character.only = TRUE)
+```
+
+# Gérer son espace de travail
+
+L'ensemble des objets ainsi créés sont stockés dans l'espace de travail. Cet espace de travail peut être sauvegardé, chargé ou réinitialisé, selon les besoins.
+
+```{r include = TRUE, eval = FALSE}
+
+# Sauvegarder son espace de travail dans un fichier .RData
+save.image()
+
+# Sauvegarder des objets spécifiques dans le fichier spécifié myfile.RData 
+save(object, list, file="myfile.RData") 
+
+# Recharge l'environnement de travail
+load("myfile.RData") 
+
+# Lister les objets définis dans l'espace de travail actuel
+ls()
+
+# Réinitialiser (nettoyer) son espace de travail
+rm(list=ls())
+
+# Quitter R
+q() 
+
+```
+
+L'enregistrement de l'espace de travail se fait automatiquement dans le répertoire courant (c'est-à-dire celui dans lequel vous êtes "présentement positionnés"). Plusieurs commandes permettent de gérer le répertoire courant.
+
+```{r include = TRUE, eval = FALSE}
+# Afficher le répertoire de travail actuel
+getwd() 
+
+# Changer le répertoire courant (attention, indiquer un nom de répertoire valide!)
+setwd('monRepertoire') 
+
+# Lire le contenu du repertoire courant
+dir() 
+```
+
+# Exercice
+
+1. Créer un tableau de données contenant le prénom, l'âge, et la commune de résidence d'au moins 5 de vos collègues de formation
+
+2. Calculer la moyenne des âges, la répartition par genre et par commune.
+
+3. Commenter votre code.
+
+4. Enregistrer vos données et votre script.
+
+```{r,eval=TRUE, comment="...  ", warning=FALSE,include=TRUE}
+
+#Compléter les variables
+prenoms <- c()
+ages <- c()
+communes <- c()
+
+#Créer la dataframe, analyser les variables et les individus
+
+```
