@@ -387,3 +387,6 @@ communes <- c()
 #Créer la dataframe, analyser les variables et les individus
 
 ```
+
+[2 - Explorer et manipuler des données](./explorer.html).
+[3 - Représenter des données](./representer.html).
