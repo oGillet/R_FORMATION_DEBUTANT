@@ -10,7 +10,7 @@ output:
 ---
 
 ```{r, echo=FALSE}
-htmltools::img(src = knitr::image_uri("C:/GIT/R_FORMATION_DEBUTANT/images/LOGO_CAHIERS.png"), 
+htmltools::img(src = knitr::image_uri("C:/GIT/R_FORMATION_DEBUTANT/images/logo_cahiers.png"), 
                alt = 'logo', 
                style = 'position:absolute; top:0; right:0; padding:10px;height:120px')
 ```

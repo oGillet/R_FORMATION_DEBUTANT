@@ -1,0 +1,881 @@
+---
+title: "Représenter des données"
+author: "Marie Havret, Ugo Parment, Olivier Gillet"
+output: 
+  html_document:
+    toc: true
+    toc_float: 
+        collapsed: false
+    number_sections: true
+---
+
+```{r, echo=FALSE}
+htmltools::img(src = knitr::image_uri("C:/GIT/R_FORMATION_DEBUTANT/images/logo_cahiers.png"), 
+               alt = 'logo', 
+               style = 'position:absolute; top:0; right:0; padding:10px;height:120px')
+```
+
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+<style>
+body {text-align: justify}
+</style>
+
+# Gérer son espace de travail
+
+```{r,eval=TRUE, comment="...  ",message=FALSE,warning=FALSE,include=TRUE}
+# Reinitialiser (nettoyer) son espace de travail
+# Lister les objets definis dans l'espace de travail actuel puis supprimer
+rm(list=ls())
+
+# Dans le répertoire "FORMATION_R", enregistrer un nouveau script R
+# Fixer le repertoire courant (attention, indiquer un nom de repertoire valide!)
+setwd('.')
+
+# Afficher le repertoire de travail actuel
+getwd()
+
+# Packages necessaires pour cette formation : 
+# install.packages('ggplot2')
+library(ggplot2)
+# install.packages('plotly')
+library(plotly)
+# install.packages("reshape")
+library(reshape)
+# install.packages("tidyr")
+library(tidyr)
+# install.packages("sf")
+library(sf)
+# install.packages("leaflet")
+library(leaflet)
+# install.packages("osmdata")
+library(osmdata)
+```
+
+# Ouvrir les données
+
+```{r,eval=TRUE, comment="...  ", warning=FALSE,include=FALSE}
+# Import des donnees precedemment creees, fonction 'load'
+load('NYPD_Arrests_Data_2017.Rdata')
+```
+
+```{r,eval=FALSE, comment="...  ", warning=FALSE,include=TRUE}
+# Import des donnees precedemment creees, fonction 'load'
+load('NYPD_Arrests_Data_2017.Rdata')
+```
+
+# Résumé de la session précédente
+- Requêter et parcourir un tableau de données
+- Manipuler et créer un tableau de données
+- Calculer de nouvelles variables
+
+```{r,eval=TRUE, comment="...  ", warning=FALSE,include=TRUE}
+# Compter le nombre d'infractions par jour, fonction 'table', et convertir en tableau de données (dataframe)
+# Creation d'une variable temporaire
+tmp <- as.data.frame(table(dfFilter$ARREST_DATE))
+
+# Changer le nom des colonnes de la table 
+colnames(tmp) <- c('Date', 'nOfArrests')
+
+#  de la colonne 'Date'
+tmp$Date <- as.POSIXct(as.character(tmp$Date),format="%Y-%m-%d")
+
+# Representation graphique en utilisant les fonctions basiques de R
+plot(tmp$Date, tmp$nOfArrests, type = "l", frame = TRUE, pch = NA, 
+     col = "red", xlab = "Date", ylab = "Number of Arrests")
+
+# Representation graphique en utilisant les fonctions de package ggplot2
+ggplot(data=tmp,aes(x=Date,y=nOfArrests))+
+  geom_line()+
+  labs(x = "Date", y = "Number of Arrests")+
+  theme_bw() + theme(panel.grid.minor = element_blank())
+```
+
+# Statistiques descriptives (2017) 
+
+```{r,eval=TRUE, comment="...  ", warning=FALSE,include=TRUE}
+
+# Utilisation de la fonction 'aggregate' pour generer quelques statistiques descriptives (minimum, moyenne, maximum ...)
+# La fonction retourne les jours avec le plus et le moins d'infractions, la moyenne quotidienne d'infraction et le total mensuel d'infractions.
+
+# Creer une nouvelle colonne contenant le numéro du mois
+tmp[['Month']] <- format(tmp$Date, "%m")
+
+# Realiser plusieurs 'aggregate', plusieurs fonctions (minimum, maximum, moyenne)
+minArrests <- aggregate(nOfArrests ~ Month, data = tmp, FUN = min)
+maxArrests <- aggregate(nOfArrests ~ Month, data = tmp, FUN = max)
+sumArrests <- aggregate(nOfArrests ~ Month, data = tmp, FUN = sum)
+meanArrests <- aggregate(nOfArrests ~ Month, data = tmp, FUN = mean)
+
+# Creer un tableau de donnees avec toutes ces statistiques
+statsByMonths <- cbind(minArrests, meanArrests[,2],maxArrests[,2], sumArrests[,2])
+
+# Convertir les donnees du tableau
+for(i in 2:ncol(statsByMonths)){
+  statsByMonths[,i] <- as.numeric(statsByMonths[,i])
+}
+
+# Renommer les colonnes du tableau
+colnames(statsByMonths) <-  c('Month', 'Min', 'Mean','Max', 'Sum')
+
+# Autre manière de faire grâce a la fonction cast()
+# Elle permet de combiner les fonctions statistiques precedentes
+statsByMonths <- cast(Month ~ ., value = 'nOfArrests', data = tmp, fun = c(min, mean, max,sum))
+statsByMonths <- as.data.frame(statsByMonths)
+colnames(statsByMonths) <-  c('Month', 'Min', 'Mean','Max', 'Sum')
+
+# Supprimer les variables inutiles pour la suite du script
+rm(tmp, minArrests, meanArrests, maxArrests, sumArrests)
+
+# Mettre en forme la variable qui definit notre abscisse
+# Concatener la variable 'Month' avec l'année et un jour du mois
+statsByMonths$Month <- paste0('2017-',statsByMonths$Month,'-01')
+# Convertir cette chaine de caractere en date
+statsByMonths$Month <- as.POSIXct(as.character(statsByMonths$Month),format="%Y-%m-%d")
+
+# Representer graphiquement les résultats
+plot(statsByMonths$Month, statsByMonths$Min, type = "b", frame = TRUE,pch = 19, col = "blue",
+     xlab = "Date", ylab = "Number of Arrests",ylim=c(0,max(statsByMonths$Max)))
+lines(statsByMonths$Month, statsByMonths$Mean, pch = 19, col = "grey", type = "b", lty = 2)
+lines(statsByMonths$Month, statsByMonths$Max, pch = 19, col = "red", type = "b", lty = 2)
+legend("bottomright", legend=c("Min", "Mean","Max"),col=c("blue", "grey", "red"), lty = 1:3, cex=0.5)
+```
+
+Le package "tidyr" a été développé pour manipuler et mettre en forme des tableaux de données. La fonction "gather" issue de ce package permet créer des modalités d'une nouvelle variable à partir de colonnes. 
+
+![https://garrettgman.github.io/tidying/](C:/GIT/R_FORMATION_DEBUTANT/images/gather.png)
+
+```{r,eval=TRUE, comment="...  ", warning=FALSE,include=TRUE}
+# Autre manière de représentation en utilisant ggplot
+tmp <- statsByMonths[,c("Month","Min","Mean","Max")]
+
+# Appel de la foncion 'gather' pour mettre en forme les donnees
+tmp <- gather(tmp, key = "Variable", value = "Value", -Month)
+ggplot(tmp, aes(x = Month, y = Value)) + 
+  geom_line(aes(color = Variable)) + 
+  scale_color_manual(values = c("steelblue", "grey", "darkred"))+
+  labs(x = "Date", y = "Number of Arrests")+
+  theme_bw() + theme(panel.grid.minor = element_blank())
+
+# Supprimer les variables inutiles pour la suite du script
+rm(statsByMonths)
+```
+
+# Exercice
+
+Objectif: Calculer un résumé statistique pour le mois de juillet 2017.  
+
+1. Sélectionner un mois particulier : ici le mois de juillet  
+2. Compter le  nombre d'infractions selon les genres et par quartier pour juillet  
+3. Compter le  nombre d'infractions selon les classes d'âge et par quartier 
+4. Calculer le pourcentage d'homme et de femme ainsi que le total de crime
+5. Joindre les deux tables  
+6. Identifier le crime majoritaire pour chaque quartier  
+
+```{r,eval=TRUE, comment="...  ", warning=FALSE,include=FALSE}
+# Sélectionner un mois particulier : ici le mois de juillet
+dfFilterjuly <- dfFilter[dfFilter$ARREST_DATE >= "2017-07-01" & dfFilter$ARREST_DATE <= "2017-07-31",]
+
+# Compter le  nombre d'infractions selon les genres et par quartier pour juillet
+dfSexeQuartier <- aggregate(INFRACTION ~ SEX + ARREST_QUARTIER, data = dfFilterjuly, FUN = length)
+dfSexeQuartier <- spread(dfSexeQuartier, key = SEX, value = INFRACTION)
+
+# Compter le  nombre d'infractions selon les classes d'âge et par quartier 
+dfAgeQuartier <- aggregate(INFRACTION ~ AGE_GROUPE + ARREST_QUARTIER, data = dfFilterjuly, FUN = length)
+dfAgeQuartier <- spread(dfAgeQuartier, key = AGE_GROUPE, value = INFRACTION)
+
+# Joindre les deux tables
+dfjuly <- merge(dfSexeQuartier,dfAgeQuartier, by='ARREST_QUARTIER')
+
+# Identifier le crime majoritaire pour chaque quartier 
+dfjuly$Crime <- NULL
+listQuartier <- unique(dfFilter$ARREST_QUARTIER)
+# Itérer sur chaque quartier avec la boucle 'For'
+for(quartier in listQuartier){
+  # Afficher le nom du quartier
+  cat('+++',quartier,'\n')
+  # Identifier le crime principal du quartier
+  crime <- names(sort(table(dfFilter[which(dfFilter$ARREST_QUARTIER == quartier),"INFRACTION"]),decreasing = T)[1])
+  # Afficher le crime
+  cat('------',crime,'\n')
+  # Ajouter le crime dans la dataframe 'df'
+  dfjuly[which(dfjuly$ARREST_QUARTIER == quartier),"Crime"] <- crime
+}
+
+# Renommer la première colonne
+names(dfjuly)[1] <- "Quartiers"
+
+# Afficher la table juillet seulement la colonne 'ARREST_QUARTIER' et 'CRIME'
+dfjuly[,c('Quartiers','Crime')]
+
+# Créer de nouvelles colonnes
+# Calculer le total de crimes par quartier (somme des colonnes homme et femme)
+dfjuly$Total <- rowSums(dfjuly[, c('Femme','Homme')])
+
+# Calculer le pourcentage d'homme et de femme par quartier (deux méthodes)
+dfjuly$perFemme <- format((dfjuly$Femme/dfjuly$Total)*100, digits = 3)
+dfjuly[['perHomme']] <- format((dfjuly[['Homme']]/dfjuly[['Total']])*100, digits = 3)
+
+# Réorganiser les colonnes de la dataframe
+dfjuly <- dfjuly[, c("Quartiers","Femme","perFemme","Homme","perHomme","<18","18-24","25-44","45-64","65+","Total","Crime")]
+```
+
+```{r,eval=TRUE, comment="...  ", warning=FALSE,include=TRUE}
+dfjuly
+```
+
+# Représentations graphiques 
+
+```{r,eval=TRUE, comment="...  ", warning=FALSE,include=TRUE}
+
+#Creation d'une colonne "WEEK" pour connaitre le numéro de la semaine 
+dfFilterjuly$WEEK <- format(dfFilterjuly$ARREST_DATE, "%V")
+
+# Compter le nombre d'infractions par jour 
+nbInfPerDay <- aggregate(INFRACTION ~ ARREST_DATE, data = dfFilterjuly, FUN = length)
+
+# Créer un graphique avec ggplot
+ggplot(nbInfPerDay,aes(x = ARREST_DATE,y = INFRACTION))+
+  geom_line()+
+  geom_point()+
+  scale_x_datetime(name = "",date_breaks = "3 day", date_labels = "%a %d")+
+  ggtitle("Daily number of arrests (july 2017)")+ 
+  labs(x = "Date", y = "Number of Arrests")+
+  theme_bw() + theme(panel.grid.minor = element_blank())
+
+# Stocker cet objet dans une nouvelle variable
+c1 <- ggplot(nbInfPerDay,aes(x = ARREST_DATE,y = INFRACTION))+
+  geom_line()+
+  geom_point()+
+  scale_x_datetime(name = "",date_breaks = "3 day", date_labels = "%a %d")+
+  ggtitle("Daily number of arrests (july 2017)")+ 
+  labs(x = "Date", y = "Number of Arrests")+
+  theme_bw() + theme(panel.grid.minor = element_blank())
+
+# Afficher ce graphique/Objet dans un viewer interactif (plotly package)
+ggplotly(c1)
+
+# Compter le nombre d'infractions par jour et par genre
+nbInfPerDay_Sex <- aggregate(INFRACTION ~ ARREST_DATE + SEX, data = dfFilterjuly, FUN = length)
+
+# Stocker ce graphique dans une nouvelle variable
+c2 <- ggplot(nbInfPerDay_Sex,aes(x = ARREST_DATE, y = INFRACTION, colour = SEX))+
+  geom_line()+ 
+  geom_point()+
+  scale_x_datetime(name = "",date_breaks = "3 day", date_labels = "%a %d")+
+  ggtitle("Daily number of arrests (july 2017)") +
+  labs(x = "Date", y = "Number of Arrests")+
+  theme_bw() + theme(panel.grid.minor = element_blank())
+
+# Afficher ce graphique/Objet dans un viewer interactif (plotly package)
+ggplotly(c2)
+```
+
+# Exercice
+
+1. Créer le graphique du nombre d'infractions commis la première semaine de juillet 2017
+
+```{r,eval=TRUE, comment="...  ",echo=FALSE,warning=FALSE,include=TRUE}
+# Sélectionner la première semaine de juillet 2017
+tmp <- dfFilter[dfFilter$ARREST_DATE >= "2017-07-01" & dfFilter$ARREST_DATE < "2017-07-08",]
+
+# Compter le nombre d'infractions par jour 
+tmpPerDay <- aggregate(INFRACTION ~ ARREST_DATE, data = tmp, FUN = length)
+# Afficher le graphique
+ggplot(tmpPerDay,aes(x = ARREST_DATE, y = INFRACTION))+
+  geom_line()+ 
+  geom_point()+
+  scale_x_datetime(name = "",date_breaks = "1 day", date_labels = "%a %d")+
+  ggtitle("1. Daily number of arrests (01/07/2017-07/07/2017)")+
+  labs(x = "Date", y = "Number of Arrests")+
+  theme_bw() + theme(panel.grid.minor = element_blank())
+```
+
+2. Représenter graphiquement les infractions commises par tranche d'âge la première semaine de juillet 2017
+
+```{r,eval=TRUE, comment="...  ",echo=FALSE,warning=FALSE,include=TRUE}
+# Compter le nombre d'infractions par jour et par classe d'age
+nbInfPerDay_Age <- aggregate(INFRACTION ~ ARREST_DATE + AGE_GROUPE, data = dfFilterjuly, FUN = length)
+# Stocker ce graphique dans une nouvelle variable
+ggplot(nbInfPerDay_Age,aes(x = ARREST_DATE, y = INFRACTION, colour = AGE_GROUPE))+
+  geom_line()+
+  geom_point()+
+  scale_x_datetime(name = "",date_breaks = "3 day", date_labels = "%a %d")+
+  ggtitle("2. Daily number of arrests (01/07/2017-07/07/2017)")+
+  labs(x = "Date", y = "Number of Arrests")+
+  theme_bw() + theme(panel.grid.minor = element_blank())
+```
+
+3. Représenter graphiquement les infractions des semaines 27 à 30 (x=jours / y= nb infractions)
+
+```{r,eval=TRUE, comment="...  ",echo=FALSE,warning=FALSE,include=TRUE}
+# Compter le nombre d'infractions par jour et par classe d'age
+tmpPerWeek <- aggregate(INFRACTION ~ WEEK + ARREST_DATE, data = dfFilterjuly, FUN = length)
+# Obtenir le numero du jours dans la semaine a partir de la date
+tmpPerWeek$day <- as.POSIXlt(tmpPerWeek$ARREST_DATE)$wday
+
+ggplot(tmpPerWeek[tmpPerWeek$WEEK!=26 & tmpPerWeek$WEEK!=31,], aes(x = day, y = INFRACTION, colour = WEEK))+
+  geom_line()+
+  geom_point()+
+  ggtitle("3. Daily number of arrests (4 weeks)")+
+  scale_x_continuous(breaks = seq(0,6,1),labels=c("0" = "Monday", "1" = "Tuesday", "2" = "Wednesday", "3"="Thurday", "4"="Friday", "5"="Saturday", "6"="Sunday"))+
+  labs(x = "Day", y = "Number of Arrests")+
+  theme_bw() + theme(panel.grid.minor = element_blank())
+```
+
+# Quelques améliorations graphiques
+
+```{r,eval=TRUE, comment="...  ",warning=FALSE,include=TRUE}
+c1 <- ggplot(nbInfPerDay,aes(x = ARREST_DATE,y = INFRACTION))+
+  geom_line()+ 
+  geom_point()+
+  scale_x_datetime(name = "",date_breaks = "2 day",date_labels = "%A %d %B")+
+  ggtitle("Number of arrests by day, on July 2017")+
+  theme_bw()+
+  theme(axis.text.x = element_text(family = "cursive",
+                                   colour = "#A9A9A9",
+                                   angle = 75, 
+                                   size=9, 
+                                   face="bold"),
+        axis.text.y = element_text(colour = "#A9A9A9",
+                                   size=9, 
+                                   face="italic"),
+        axis.title =  element_text(colour = "black",
+                                   size=13, 
+                                   face=3),
+        plot.title = element_text(colour = "black",
+                                  size=15, 
+                                  face="bold",
+                                  vjust = 0.5),
+        panel.grid.minor = element_blank())
+ggplotly(c1)
+
+c1 <- ggplot(nbInfPerDay_Sex,aes(x = ARREST_DATE, y = INFRACTION, colour = SEX))+
+  geom_line()+ 
+  geom_point()+
+  scale_x_datetime(name = "",date_breaks = "2 day",date_labels = "%A %d %B")+
+  ggtitle("Number of arrests by gender and by day, on July 2017")+
+  theme_bw()+
+  theme(axis.text.x = element_text(family = "cursive",
+                                   colour = "#A9A9A9",
+                                   angle = 75, 
+                                   size=9, 
+                                   face="bold"),
+        axis.text.y = element_text(colour = "#A9A9A9",
+                                   size=9, 
+                                   face="italic"),
+        axis.title =  element_text(colour = "black",
+                                   size=13, 
+                                   face=3),
+        plot.title = element_text(colour = "black",
+                                  size=15, 
+                                  face="bold",
+                                  vjust = 0.5),
+        panel.grid.minor = element_blank())
+ggplotly(c1)
+```
+
+# Les données spatialisées
+
+Les données spatialisées du package 'sf' correspondent à une table dont une colonne est dédiée à la géométrie. Chaque ligne correspond à un individu (ou entités), qui est associé à des variables (i.e un identifiant, nom du quartier, etc.) et à une forme. Ce dernier peut être un polygone, une ligne ou un point. Le package 'sf' met à disposition une large gamme de fonctions permettant les traitements spatiaux. Elles sont toutes de la forme ‘st_X’ où X correspond au traitement que l’on souhaite réaliser, par exemple une intersection ou un buffer. Dans notre cas, nous avons à disposition plusieurs table. Par exemple, la table 'shpQuartier', où chaque ligne correspond à un quartier associé à une géométrie. 
+
+```{r,eval=TRUE, comment="...  ",message=FALSE,warning=FALSE,include=FALSE}
+# Reinitialiser (nettoyer) son espace de travail
+# Lister les objets definis dans l'espace de travail actuel puis supprimer
+rm(list=ls())
+
+# Ouvrir le fichier avec les statistiques -
+load('NYPD_Arrests_Statistics_2017.Rdata')
+
+# Ouvrir le shapefile
+shpQuartier <- read_sf("Quartiers.shp", as_tibble = F)
+```
+
+```{r,eval=FALSE, comment="...  ",message=FALSE,warning=FALSE,include=TRUE}
+# Reinitialiser (nettoyer) son espace de travail
+# Lister les objets definis dans l'espace de travail actuel puis supprimer
+rm(list=ls())
+
+# Ouvrir le fichier avec les statistiques -
+load('NYPD_Arrests_Statistics_2017.Rdata')
+
+# Ouvrir le shapefile
+shpQuartier <- read_sf("Quartiers.shp", as_tibble = F)
+```
+
+```{r,eval=TRUE, comment="...  ",message=FALSE,warning=FALSE,include=TRUE}
+# Afficher le systeme de projection du shapefile
+st_crs(shpQuartier)
+
+# Modifier le systeme de projection 
+shpQuartier <- st_transform(shpQuartier,4326)
+
+# Afficher l'emprise spatiale du jeu de donnees
+st_bbox(shpQuartier$geometry)
+
+# Afficher le shapefile - toutes les colonnes de la table attributaire
+plot(shpQuartier, col="white")
+
+# Afficher le shapefile - seulement la deuxieme colonne
+plot(shpQuartier[2])
+
+# Afficher seulement la geometrie du shapefile
+plot(st_geometry(shpQuartier), col="white")
+
+# Afficher les centroïdes des zones
+plot(st_centroid(shpQuartier$geometry), pch = 20, col = "lightblue", add = T)
+
+# Joindre les statistiques au shapefile
+shpQuartier <- merge(shpQuartier, df, by.x="boro_name", by.y='Quartiers')
+```
+
+```{r,eval=TRUE, comment="...  ",message=FALSE,warning=FALSE,include=TRUE}
+# Afficher le debut de la table
+head(shpQuartier[,c('boro_name','Crime','geometry')])
+
+# Afficher le type de l'objet
+class(shpQuartier)
+
+# Afficher le nombre total de crimes pour 2017
+plot(shpQuartier[14])
+```
+
+## Collecter des données
+
+```{r,eval=TRUE, comment="...  ",message=FALSE,warning=FALSE,include=FALSE}
+# Construire une requête OSM
+# q <- getbb("New York")%>%
+#   opq()%>%
+#   add_osm_feature("amenity", "police")
+#
+# # Lancer la requête, fonction 'osmdata_sf'
+# osmPolice<- osmdata_sf(q)
+#
+# # Obtenir un objet SF contenant les points
+# shpPolice <- osmPolice$osm_points
+#
+# # Afficher le type de l'objet
+# class(shpPolice)
+#
+# # Supprimer les variables inutiles pour la suite du script
+# rm(q, osmPolice)
+
+# Enregistrer le fichier
+# save(shpPolice, file='Commissariat.Rdata')
+
+# /!\/!\/!\/!\/!\/!\/!\/!\/!\/!\/!\/!\/!\/!\/!\/!\/!\/!\/!\
+# /!\ Charger les données si absence de connexion internet
+load('Commissariat.Rdata')
+# /!\/!\/!\/!\/!\/!\/!\/!\/!\/!\/!\/!\/!\/!\/!\/!\/!\/!\/!\
+
+# Afficher seulement la geometrie du shapefile
+plot(st_geometry(shpQuartier), col="white")
+
+# Afficher le shapefile des commissariats
+plot(st_geometry(shpPolice), pch = 20, add=T, col='blue')
+
+# Reprojeter les donnees dans le même système de projection
+shpPolice <- st_transform(shpPolice, st_crs(shpQuartier))
+
+# Compter le nombre de commissariats pour chaque quartier
+shpQuartier$Commissariat <- lengths(st_intersects(shpQuartier, shpPolice))
+```
+
+```{r,eval=FALSE, comment="...  ",message=FALSE,warning=FALSE,include=TRUE}
+# Construire une requête OSM
+q <- getbb("New York")%>%
+  opq()%>%
+  add_osm_feature("amenity", "police")
+
+# Lancer la requête, fonction 'osmdata_sf'
+osmPolice<- osmdata_sf(q)
+
+# Obtenir un objet SF contenant les points
+shpPolice <- osmPolice$osm_points
+
+# Afficher le type de l'objet
+class(shpPolice)
+
+# Supprimer les variables inutiles pour la suite du script
+rm(q, osmPolice)
+
+# Enregistrer le fichier
+save(shpPolice, file='Commissariat.Rdata')
+
+# /!\/!\/!\/!\/!\/!\/!\/!\/!\/!\/!\/!\/!\/!\/!\/!\/!\/!\/!\
+# /!\ Charger les données si absence de connexion internet
+# load('DONNEES//Commissariat.Rdata')
+# /!\/!\/!\/!\/!\/!\/!\/!\/!\/!\/!\/!\/!\/!\/!\/!\/!\/!\/!\
+
+# Afficher seulement la geometrie du shapefile
+plot(st_geometry(shpQuartier), col="white")
+
+# Afficher le shapefile des commissariats
+plot(st_geometry(shpPolice), pch = 20, add=T, col='blue')
+
+# Reprojeter les donnees dans le même système de projection
+shpPolice <- st_transform(shpPolice, st_crs(shpQuartier))
+
+# Compter le nombre de commissariats pour chaque quartier
+shpQuartier$Commissariat <- lengths(st_intersects(shpQuartier, shpPolice))
+```
+
+## Requêtes spatiales
+
+```{r,eval=TRUE, comment="...  ",message=FALSE,warning=FALSE,include=FALSE}
+# Ouvrir le shapefile des districts policiers 
+shpDistrict <- read_sf("Precincts_Boundaries.shp", as_tibble = F)
+```
+
+```{r,eval=FALSE, comment="...  ",message=FALSE,warning=FALSE,include=TRUE}
+# Ouvrir le shapefile des districts policiers  
+shpDistrict <- read_sf("Precincts_Boundaries.shp", as_tibble = F)
+```
+
+```{r,eval=TRUE, comment="...  ",message=FALSE,warning=FALSE,include=TRUE}
+# Reprojeter les donnees dans le meme systeme de projection
+shpDistrict <- st_transform(shpDistrict, st_crs(shpQuartier))
+
+# Compter le nombre de commissariat pour chaque district
+shpDistrict$Commissariat <- lengths(st_intersects(shpDistrict, shpPolice))
+```
+
+```{r,eval=TRUE, comment="...  ",message=FALSE,warning=FALSE,include=FALSE}
+# Import de donnees, table 'df' et 'dfFilter', fonction 'load'
+load('NYPD_Arrests_Data_2017.Rdata')
+```
+
+```{r,eval=FALSE, comment="...  ",message=FALSE,warning=FALSE,include=TRUE}
+# Import de donnees, table 'df' et 'dfFilter', fonction 'load'
+load('NYPD_Arrests_Data_2017.Rdata')
+```
+```{r,eval=TRUE, comment="...  ",message=FALSE,warning=FALSE,include=TRUE}
+# Creer des donnees spatialisées à partir d'un tableau de donnees
+# La fonction st_as_sf() permet de transformer un tableau au format sf, en objet spatialise.
+# Il convient egalement de définir le systeme de coordonnees
+shpCrime <- st_as_sf(dfFilter,coords = c("LONGITUDE","LATITUDE"),crs=4326)
+
+# Reprojeter les donnees dans le meme systeme de projection
+shpCrime <- st_transform(shpCrime, st_crs(shpQuartier))
+
+# Compter le nombre d'infractions pour chaque district
+shpDistrict$Crime <- lengths(st_intersects(shpDistrict, shpCrime))
+```
+
+## Leaflet, viewer interactif
+
+Le package Leaflet a été developpé pour manipuler des données spatialisées et créer des cartes interactives (viewer)
+
+```{r,eval=TRUE, comment="...  ",message=FALSE,warning=FALSE,include=TRUE}
+# Preparation de la carte leaflet
+
+# Utilisation du pipe %>% pour chainer les fonctions du package leaflet
+leaflet()%>%
+  addTiles() #Fond de carte OpenStreetMap par défaut
+
+# Centrer la carte sur New York
+coord <- st_bbox(shpQuartier$geometry)# Permet de connaitre la couverture spatiale des quartiers de NY
+lng_NY <- as.numeric((coord["xmin"] + coord['xmax']) / 2) #(Longitude min + Longitude max) / 2
+lat_NY <- as.numeric((coord["ymin"] + coord['ymax']) / 2) #(Latitude min + Latitude max) / 2 
+
+#Creer une liste reprenant les centroides 
+shpQuartier_Centroids <- st_centroid(shpQuartier)
+
+# Changement du fond de carte  
+leaflet()%>% 
+  setView(lng = lng_NY, lat =lat_NY, zoom = 10)%>% 
+  addProviderTiles("Stamen.Toner")
+
+# Modification du fond cartographique
+leaflet()%>% 
+  setView(lng = lng_NY, lat = lat_NY, zoom = 10)%>% 
+  addProviderTiles("Esri.NatGeoWorldMap")
+
+# Creer un objet permettant d'afficher les quartiers de NY en rouge 
+map_NY <- leaflet() %>%
+  addTiles() %>%
+  addPolygons(data = shpQuartier,
+              fillColor = "red", # Couleur du polygone
+              weight = 2, # Epaisseur des bordures
+              opacity = 1, # Parametre obligatoire - Opacite des bordures
+              color = "black", # Couleur des bordures
+              dashArray = "3", # Type de bordure (1: continu, 2 & 3:pointillés)
+              fillOpacity = 0.4, # Opacite du fond
+              popup = shpQuartier$boro_name) # Popup avec nom des quartiers
+
+#Afficher la carte
+map_NY
+
+# Completer la carte en affichant le centroide de chaque quartier
+map_NY <- addCircles(map = map_NY,
+             data = shpQuartier_Centroids,
+             color = "yellow",
+             fill = "yellow",
+             opacity = 1)
+
+#Afficher la carte
+map_NY
+
+# Ajout de fenetre interactive à la carte (pop-up)
+# Creation du texte a afficher lors d'un clic sur l'objet cible
+popup_info <- paste0("Quartier : ", shpQuartier$boro_name,"<br>", #Nom du quartier
+                     "Infractions : ",shpQuartier$Total) # Nombre d'infractions
+
+map_NY <- leaflet() %>%
+  addTiles() %>%
+  addPolygons(data = shpQuartier,
+              fillColor = "red",
+              weight = 2,
+              opacity = 1,
+              color = "black",
+              dashArray = "3",
+              fillOpacity = 0.4,
+              popup = popup_info) # Appel de popup-info créé au-dessus
+
+#Afficher la carte
+map_NY
+
+# Carte des densites d'infractions par quartiers
+# Utilisation d'une palette graduee ("YlOrRd")
+# Voir les palettes disponibles : http://www.sthda.com/french/wiki/couleurs-dans-r
+pal <- colorBin("YlOrRd", # Palette choisie
+                domain = shpQuartier$Total, # Variable ciblee par la palette
+                bins = 4) # Nombre de classes
+
+map_NY <- leaflet() %>%
+  addTiles() %>%
+  addPolygons(data = shpQuartier,
+              fillColor = ~pal(Total),
+              weight = 2,
+              opacity = 1,
+              color = "black",
+              dashArray = "3",
+              fillOpacity = 0.4,
+              popup = popup_info) %>%
+  #Ajouter la legende
+  addLegend(pal = pal,
+            values = shpQuartier$Total,
+            position = "bottomright")
+
+# Afficher la carte
+map_NY
+```
+
+## Exercice  
+
+1. Réaliser une carte des densités d'infractions par district
+
+```{r,eval=TRUE, comment="...  ",echo=FALSE,message=FALSE,warning=FALSE,include=TRUE}
+pal <- colorBin("Reds", domain = shpDistrict$Crime,bins = 5)
+popup_info <- paste0("District n°", shpDistrict$precinct,"<br>",
+                     "Infractions : ",shpDistrict$Crime)
+map_District <- leaflet() %>%
+  addTiles() %>%
+  addPolygons(data = shpDistrict,
+              fillColor = ~pal(Crime), # Couleur du polygone
+              weight = 2, # Epaisseur de la bordure
+              opacity = 1, # Parametre obligatoire - opacity
+              color = "black",#Bordure
+              dashArray = "3", #Type de bordure (continu, pointillés)
+              fillOpacity = 1,
+              popup = popup_info) %>%
+  addLegend(pal = pal, opacity = 1,
+            values = shpDistrict$Crime,
+            position = "bottomright")
+
+# Afficher la carte
+map_District
+```
+
+## Superposer plusieurs shapefiles 
+
+```{r,eval=TRUE, comment="...  ",message=FALSE,warning=FALSE,include=TRUE}
+
+# Densité de crimes
+# Nombres de commissariats par districts de police
+pal <- colorBin("YlOrRd", domain = shpDistrict$Crime,bins = 5)
+
+#Utilisation de colorFactor pour créer une palette manuelle affectée à des données qualitatives
+palPerQuartier <- colorFactor(c("purple","turquoise4","slateblue4","seagreen","orangered4"), domain = shpQuartier$boro_name)
+
+# Creation d'un popup
+popup_info <- paste0("Quartier : ", shpQuartier$boro_name, "<br>",
+                     "District n°", shpDistrict$precinct,"<br>",
+                     "Infractions : ",shpDistrict$Crime,"<br>",
+                     "Nbr de commissariats : ",shpDistrict$Commissariat)
+
+# Creer la carte
+map_NY <- leaflet() %>%
+  addTiles()  %>%
+  addPolygons(data = shpQuartier,
+              weight = 5,
+              opacity = 3,
+              color = ~palPerQuartier(boro_name),
+              dashArray = "1",
+              group = "Quartier") %>%
+  addPolygons(data = shpDistrict,
+              fillColor = ~pal(Crime),
+              weight = 2,
+              opacity = 1,
+              color = "black",
+              dashArray = "3",
+              fillOpacity = 1,
+              popup = popup_info,
+              group = "District")%>%
+   addCircles(data = st_centroid(shpDistrict$geometry[shpDistrict$Commissariat > 0]),
+             radius = shpDistrict$Commissariat* 100 ,
+             stroke = T,
+             weight = 1,
+             opacity = 1,
+             color = "black",
+             dashArray = "1",
+             fillColor = "green",
+             fillOpacity = 0.5,
+             highlightOptions = highlightOptions(color = "yellow",opacity = 1),
+             popup = popup_info,
+             group = "Nombre de commissariats") %>%
+  addLegend(pal = pal,
+            values = shpDistrict$Commissariat,
+            opacity = 1,
+            position = "bottomright",
+            group = "District")%>%
+  addLegend(pal = palPerQuartier,
+            values = shpQuartier$boro_name,
+            opacity = 1,
+            position = "bottomright",
+            group = "Quartier")%>%
+  addLegend(data = shpDistrict$Commissariat,
+            colors =  "green",
+            label = "Nombre de commissariats",
+            opacity = 1,
+            position = "bottomright",
+            group = "Nombre de commissariats")%>%
+  addMeasure(primaryLengthUnit = "kilometers")%>%
+  addLayersControl(overlayGroups = c("Quartier","District","Nombre de commissariats"))
+
+# Afficher la carte
+map_NY
+```
+
+```{r,eval=TRUE, comment="...  ",message=FALSE,warning=FALSE,include=TRUE}
+# Creation du point
+LibertyStatue <- st_point(c(-74.0445,40.6892))
+# Projection  du point dans l'espace
+LibertyStatue <- st_sfc(LibertyStatue, crs = 4326)
+# Creation du tableau
+LibertyStatue <- st_sf(data.frame(id=1, nom="Statue de la liberté", geom=LibertyStatue))
+
+# Utilisation d'un autre système de coordonnées pour avoir des unités de distance en mètre
+NY_buff <- st_transform(LibertyStatue,3627)
+
+# Creation des plusieurs buffers (2000, 3000 mètres)
+NY_buff2000 <- st_buffer(NY_buff,2000) 
+NY_buff3000 <- st_buffer(NY_buff,3000) 
+
+# Reaffectation du systeme de coordonnees 4326 pour l'utilisation de Leaflet
+NY_buff2000 <- st_transform(NY_buff2000,4326) 
+NY_buff3000 <- st_transform(NY_buff3000,4326) 
+
+# Intersection de la localisation des crimes et des buffers : 
+crimes2000 <- shpCrime[st_intersection(NY_buff2000,shpCrime$geometry),]
+crimes3000 <- shpCrime[st_intersection(NY_buff3000,shpCrime$geometry),]
+
+# Popup a affecter aux entites spatiales
+popup_2000 <- paste0("Date : ",crimes2000$ARREST_DATE,"<br>",
+                     "Nombre de crimes : ", crimes2000$INFRACTION,"<br>",
+                     "Genre : ", crimes2000$SEX)
+popup_3000 <- paste0("Date : ",crimes3000$ARREST_DATE,"<br>",
+                     "Nombre de crimes : ", crimes3000$INFRACTION,"<br>",
+                     "Genre : ", crimes3000$SEX)
+
+# Representation cratographique des intersections à 2 et 3kms
+mapLiberty <- leaflet()%>%
+  setView(lng = -74.0445, lat =40.6892, zoom = 13)%>%
+  addTiles()%>%
+  addMarkers(data = LibertyStatue,popup = "Statue de la liberté", 
+             icon = icons(iconUrl ="https://image.flaticon.com/icons/png/512/444/444688.png",
+                          iconWidth = 45, iconHeight = 45))%>%
+  addPolygons(data =NY_buff2000,fillOpacity = 0, group = "Buffer"  ,color = 'red')%>%
+  addPolygons(data =NY_buff3000,fillOpacity = 0, group = "Buffer" ,color = 'yellow')%>%
+  addCircles(data = crimes2000,fillColor = 'red',
+             opacity = 1,color = 'red',group = "Crimes",popup = popup_2000)%>%
+  addCircles(data = crimes3000,fillColor = 'yellow',
+             opacity = 1,color = 'yellow',group = "Crimes", popup = popup_3000)%>%
+  addMeasure(primaryLengthUnit = "kilometers")%>%
+  addLayersControl(overlayGroups = c('Buffer','Crimes'))
+mapLiberty
+
+# Table et compte des crimes a 2 et 3kms de la statue de la liberte
+LibertyStatue$R2km <-lengths(st_intersects(NY_buff2000,shpCrime))
+LibertyStatue$R3km <- lengths(st_intersects(NY_buff3000,shpCrime))
+LibertyStatue
+```
+
+## Exercice
+
+Objectif : Représenter et dénombrer les crimes commis à une distance de 500m et 1000m de l'Empire State Building  
+
+1. Créer un nouveau point, l'Empire State Building (lng = -73.985664, lat = 40.748441) 
+2. Créer un ou plusieurs buffer autour de l'Empire State Building (500m, 1000m)  
+3. Réaliser l'intersection entre les buffers et le shapefile des crimes  
+2. Afficher le résultat  
+```{r,eval=TRUE, comment="...  ", echo=FALSE,message=FALSE,warning=FALSE,include=TRUE}
+# Creation du point
+EmpStBuilding <- st_point(c(-73.985664,40.748441))
+# Projection  du point dans l'espace
+EmpStBuilding <- st_sfc(EmpStBuilding, crs = 4326)
+# Creation du tableau
+EmpStBuilding <- st_sf(data.frame(id=1, nom="Empire state Building", geom=EmpStBuilding))
+
+# Utilisation d'un autre système de coordonnées pour avoir des unités de distance en mètre
+EmpStBuilding_Buff <- st_transform(EmpStBuilding,3627)
+
+# Creation des plusieurs buffers (500, 1000 mètres)
+EmpStBuilding_Buff500 <- st_buffer(EmpStBuilding_Buff,500) 
+EmpStBuilding_Buff1000 <- st_buffer(EmpStBuilding_Buff,1000) 
+
+# Reaffectation du systeme de coordonnees 4326 pour l'utilisation de Leaflet
+EmpStBuilding_Buff500 <- st_transform(EmpStBuilding_Buff500,4326) 
+EmpStBuilding_Buff1000 <- st_transform(EmpStBuilding_Buff1000,4326) 
+
+# Intersection de la localisation des crimes et des buffers : 
+EmpStBuilding_Buff_crimes500 <- shpCrime[st_intersection(EmpStBuilding_Buff500,shpCrime$geometry),]
+EmpStBuilding_Buff_crimes1000 <- shpCrime[st_intersection(EmpStBuilding_Buff1000,shpCrime$geometry),]
+
+# Popup a affecter aux entites spatiales
+popup_500 <- paste0("Date : ", EmpStBuilding_Buff_crimes500$ARREST_DATE,"<br>",
+                     "Nombre de crimes : ", EmpStBuilding_Buff_crimes500$INFRACTION,"<br>",
+                     "Genre : ", EmpStBuilding_Buff_crimes500$SEX)
+popup_1000 <- paste0("Date : ", EmpStBuilding_Buff_crimes1000$ARREST_DATE,"<br>",
+                     "Nombre de crimes : ", EmpStBuilding_Buff_crimes1000$INFRACTION,"<br>",
+                     "Genre : ", EmpStBuilding_Buff_crimes1000$SEX)
+
+# Representation cratographique des intersections à 2 et 3kms
+mapEmpStB <- leaflet()%>%
+  setView(lng = -73.985664, lat =40.748441, zoom = 15)%>%
+  addTiles()%>%
+  addMarkers(data = EmpStBuilding,popup = "Empire State Building", 
+             icon = icons(iconUrl ="https://image.flaticon.com/icons/png/512/262/262323.png",
+                          iconWidth = 45, iconHeight = 45))%>%
+  addPolygons(data =EmpStBuilding_Buff500,fillOpacity = 0, group = "Buffer"  ,color = 'red')%>%
+  addPolygons(data =EmpStBuilding_Buff1000,fillOpacity = 0, group = "Buffer" ,color = 'yellow')%>%
+  addCircles(data = EmpStBuilding_Buff_crimes1000,fillColor = 'yellow',
+             opacity = 1,color = 'yellow',group = "Crimes", popup = popup_1000)%>%
+   addCircles(data = EmpStBuilding_Buff_crimes500,fillColor = 'red',
+             opacity = 1,color = 'red',group = "Crimes",popup = popup_500)%>%
+  addMeasure(primaryLengthUnit = "kilometers")%>%
+  addLayersControl(overlayGroups = c('Buffer','Crimes'))
+mapEmpStB
+
+# Table et compte des crimes 500m et 1000m de l'empire state building
+EmpStBuilding$R500m <-lengths(st_intersects(EmpStBuilding_Buff500,EmpStBuilding_Buff_crimes500))
+EmpStBuilding$R1000m <- lengths(st_intersects(EmpStBuilding_Buff1000,EmpStBuilding_Buff_crimes1000))
+```
+
+[1 - R et ses concepts](./index.html).
+
+[2 - Explorer et manipuler des données](./explorer.html).
