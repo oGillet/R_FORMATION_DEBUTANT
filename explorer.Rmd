@@ -1,0 +1,497 @@
+---
+title: "Explorer et manipuler des données"
+author: "Marie Havret, Ugo Parment, Olivier Gillet"
+output: 
+  html_document:
+    toc: true
+    toc_float: 
+        collapsed: false
+    number_sections: true
+---
+
+```{r, echo=FALSE}
+htmltools::img(src = knitr::image_uri("C:/GIT/R_FORMATION_DEBUTANT/images/LOGO_CAHIERS.png"), 
+               alt = 'logo', 
+               style = 'position:absolute; top:0; right:0; padding:10px;height:120px')
+```
+
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+<style>
+body {text-align: justify}
+</style>
+
+Le développement des technologies s’est accompagné d’une production massive de données, le Big Data. De nombreuses institutions et organisations à but non lucratif se sont engagées dans une mise à disposition des données. Et depuis quelques années, l’accès à ces données est facilité à travers le développement de plateformes ou d’API. Des plateformes mettent à disposition de nombreuses données pour les chercheurs, journalistes, élus et citoyens. Les données utilisées pour cette formation sont produites par la police deNew-York et disponibles sur le site du https://data.cityofnewyork.us/. Il s’agit d’un ensemble de statistiquessur les crimes à New-York entre 2016-2018.
+
+# Gérer son espace de travail
+
+L'ensemble des objets ainsi créés sont stockés dans l'espace de travail. Cet espace de travail peut être sauvegardé, chargé ou réinitialisé, selon les besoins.
+L'enregistrement de l'espace de travail se fait automatiquement dans le répertoire courant (c'est-à-dire celui dans lequel vous êtes "présentement positionnés"). Plusieurs commandes permettent de gérer le répertoire courant.
+
+```{r,eval=TRUE, comment="...  ",message=FALSE,warning=FALSE,include=TRUE}
+# Reinitialiser (nettoyer) son espace de travail
+# Lister les objets définis dans l'espace de travail actuel puis supprimer
+rm(list=ls())
+
+# Dans Documents, creer un répertoire "FORMATION_R"
+# Dans ce meme repertoire, copier/coller le fichier dezippe "DONNEES"
+# Enregistrer le script R dans le répertoire "FORMATION_R"
+setwd('.')
+
+# Afficher le repertoire de travail actuel
+getwd()
+
+# Packages necessaires pour cette formation : 
+#install.packages('dplyr')
+library('dplyr')
+#install.packages('tidyr')
+library('tidyr')
+#install.packages('sf')
+library('sf')
+```
+
+# Ouvrir les données
+
+```{r,eval=TRUE, comment="...  ", warning=FALSE,include=FALSE}
+# Lecture du premier fichier :
+df <- read.csv2('NYPD_Arrests_Data_2016-2018.csv')
+````
+
+```{r,eval=FALSE, comment="...  ", warning=FALSE,include=TRUE}
+# Lecture du premier fichier :
+df <- read.csv2("DONNEES//NYPD_Arrests_Data_2016-2018.csv')
+````
+
+# Parcourir le tableau de données
+
+````{r,eval=FALSE, comment="...  ", warning=FALSE,include=TRUE}
+# Valeur prise par l'individu 1 pour la variable 2
+df[1,2]
+
+# Valeurs prises par l'individu 1 pour l'ensemble des variables
+df[1, ]
+
+# Valeurs prises par l'ensemble des individus pour la variable 1
+df[ ,1]
+
+````
+
+````{r,eval=TRUE, comment="...  ", warning=FALSE,include=TRUE}
+# Valeurs prises par les individus 1 à 3 pour la variable 1
+df[1:3,1]
+
+# Afficher que les lignes 50 à 55 et les colonnes 2, 4, 17 et 18
+df[50:55, c(2,4,17,18)]
+
+# Compter le nombre de colonnes (Premiere methode)
+numberOfColumns <- ncol(df)
+cat('il y a', numberOfColumns, 'colonnes')
+
+# Afficher le nombre de lignes et colonnes (Seconde methode)
+# /!\ la fonction retourne un vecteur de deux elements
+dim(df)
+
+# Afficher le resultat
+cat('il y a', dim(df)[2], 'colonnes et', dim(df)[1], 'lignes')
+
+# Afficher le nom des colonnes
+colnames(df)
+````
+
+# Filtrer le tableau de données
+
+````{r,eval=TRUE, comment="...  ", warning=FALSE,include=TRUE}
+# Creer un vecteur contenant la liste des colonnes d'interet
+# (liste des noms de colonnes ou des numeros de colonnes)
+listColumnsByNames <- c("ARREST_DATE", "PD_CD","KY_CD","OFNS_DESC","ARREST_BORO","AGE_GROUP","PERP_SEX","PERP_RACE","Latitude","Longitude")
+listColumnsByIndex <- c(3,4,6,7,10,13,14,15,18,19)
+
+# Filtrer le tableau
+dfFilter <- df[,listColumnsByNames] # Par le nom des colonnes
+dfFilter <- df[,listColumnsByIndex] # Par le numéro des colonnes
+
+# Supprimer la premiere "PD_CD" (deuxieme colonne)
+dfFilter <- dfFilter[,-2]
+
+# Renommer les colonnes
+newColNames <- c("ARREST_DATE","CODE_INF","INFRACTION","ARREST_QUARTIER","AGE_GROUPE","SEX","RACE","LATITUDE","LONGITUDE")
+colnames(dfFilter) <- newColNames
+
+# Modifier le type de donnees de la colonne "ARREST_DATE"
+dfFilter$ARREST_DATE <- as.POSIXct(as.character(dfFilter$ARREST_DATE),format="%Y-%m-%d")
+
+# Afficher la structure de la table
+str(dfFilter)
+
+# Selectionner 2017
+dfFilter <- dfFilter[dfFilter$ARREST_DATE >= "2017-01-01" & dfFilter$ARREST_DATE < "2018-01-01",]
+````
+
+# Modifier certaines variables
+
+````{r,eval=TRUE, comment="...  ", warning=FALSE,include=TRUE}
+# Afficher les modalites de la variable 'ARREST_QUARTIER'
+unique(dfFilter$ARREST_QUARTIER)
+
+# Remplacer la lettre d'identification par le nom
+# B(Bronx), S(Staten Island), K(Brooklyn), M(Manhattan), Q(Queens)
+dfFilter$ARREST_QUARTIER <- ifelse(dfFilter$ARREST_QUARTIER == "S", "Staten Island",
+                              ifelse(dfFilter$ARREST_QUARTIER == "K", "Brooklyn",
+                                ifelse(dfFilter$ARREST_QUARTIER == "M", "Manhattan",
+                                  ifelse(dfFilter$ARREST_QUARTIER == "Q", "Queens", "Bronc"))))
+
+# Afficher les modalites de la variable 'ARREST_QUARTIER'
+unique(dfFilter$ARREST_QUARTIER)
+
+# Modifier certaines valeurs du tableau
+dfFilter$ARREST_QUARTIER <- gsub("Bronc", "Bronx", dfFilter$ARREST_QUARTIER)
+
+# Recodage des modalites d'une variable
+dfFilter$SEX <- as.character(dfFilter$SEX)
+dfFilter$SEX[dfFilter$SEX == "F"] <- "Femme" 
+dfFilter$SEX[dfFilter$SEX == "M"] <- "Homme"
+
+# Afficher les modalites de la variable 'SEX'
+unique(dfFilter$SEX)
+
+# Afficher le nombre de lignes 
+nrow(dfFilter)
+
+# Supprimer des NA's
+dfFilter <-  dfFilter[complete.cases(dfFilter), ]
+
+# Afficher de nouveau le nombre de lignes 
+nrow(dfFilter)
+````
+
+````{r,eval=TRUE, comment="...  ", warning=FALSE,include=FALSE}
+# Sauvegarder le fichier
+# Exporter le fichier en csv
+write.csv2(dfFilter, file = "NYPD_Arrests_Data_2017.csv")
+# Exporter en Rdata, objet R 
+save(dfFilter, file = "NYPD_Arrests_Data_2017.Rdata")
+````
+
+````{r,eval=FALSE, comment="...  ", warning=FALSE,include=TRUE}
+# Sauvegarder le fichier
+# Exporter le fichier en csv
+write.csv2(dfFilter, file = "NYPD_Arrests_Data_2017.csv")
+# Exporter en Rdata, objet R 
+save(dfFilter, file = "NYPD_Arrests_Data_2017.Rdata")
+````
+
+# Requêter le jeu de données
+
+````{r include = FALSE, eval = TRUE}
+# Réinitialiser (nettoyer) son espace de travail
+# Lister les objets définis dans l'espace de travail actuel puis supprimer
+rm(list=ls())
+
+# Charger le tableau précédemment créé
+load('NYPD_Arrests_Data_2017.Rdata')
+````
+
+````{r include = TRUE, eval = FALSE}
+# Réinitialiser (nettoyer) son espace de travail
+# Lister les objets définis dans l'espace de travail actuel puis supprimer
+rm(list=ls())
+
+# Charger le tableau précédemment créé
+load('NYPD_Arrests_Data_2017.Rdata')
+````
+
+````{r,eval=TRUE, comment="...  ", warning=FALSE,include=TRUE}
+# Trier par date, fonction "order"
+dfFilter <- dfFilter[order(dfFilter$ARREST_DATE),]
+
+# Afficher un resume statistique de l'ensemble du tableau
+summary(dfFilter)
+
+# Afficher les valeurs uniques pour une colonne 
+unique(dfFilter$RACE)
+
+# Afficher un compte de ces valeurs
+summary(dfFilter$RACE)
+
+# Afficher le nombre de modalites pour la variable "RACE"
+# Identifier ces valeurs uniques, fonction "unique"
+# Puis fonction "length" pour afficher la longueur d'un vecteur
+length(unique(dfFilter$RACE))
+
+# Compter le nombre d'infractions par jour, fonction "table"
+countInfByDay <- table(dfFilter$ARREST_DATE)
+
+# Trier le vecteur nommé par ordre decroissant et afficher les trois premières valeurs
+# Tableau initial
+head(countInfByDay, n=3)
+# Tri decroissant, fonction "sort"
+countInfByDay <- sort(countInfByDay, decreasing = T)
+# Afficher le jour comptant le plus d'arrestations
+head(countInfByDay, n=1)
+
+# Afficher le nombre d'infractions commises par les mineurs ("<18")
+# Premiere methode, fonction "length" pour afficher la longueur d'un vecteur
+length(dfFilter$AGE_GROUP[dfFilter$AGE_GROUP == "<18"])
+# Seconde methode, fonction "nrow" pour afficher le nombre de lignes d'une table
+nrow(dfFilter[which(dfFilter$AGE_GROUPE == "<18"),])
+
+# Trouver le nombre d'infractions commises le 5 août 2017
+nOfInfraction <- nrow(dfFilter[which(dfFilter$ARREST_DATE == "2017-08-05"),])
+
+# Et le jour de votre anniversaire, combien y a-t-il eu d'infractions à New-York?
+
+# Combien de femmes ont commis une infraction ce même jour ?
+nOfwoman <- nrow(dfFilter[which(dfFilter$ARREST_DATE == "2017-08-05" & dfFilter$SEX == "Femme"),])
+
+# Pourcentage Homme-Femme
+perWoman <-(nOfwoman/nOfInfraction)*100 
+cat(format(perWoman, digits = 3),'% des criminels du 05 août 2017 sont des femmes')
+
+# Supprimer les variables inutiles pour la suite du script
+rm(nOfwoman, perWoman, nOfInfraction, countInfByDay)
+
+````
+
+# Exercice
+
+1. Trouver le pourcentage de femmes arrêtées en 2017 et afficher la phrase "...% des criminels en 2017 sont des femmes"
+2. Afficher le nombre de vols (ROBBERY) entre le 15 décembre et le 31 decembre 2017
+3. Afficher le quartier ayant connu le plus de vols entre le 15 et le 31 decembre 2017
+4. Afficher les 3 types d'infractions les plus commis 
+5. Afficher le nombre d'infractions commis par des blancs de plus de 65 ans
+6. Afficher le nombre d'infractions commis par des blancs de plus de 65 ans, dans le quartier de Manhattan
+7. Afficher les 3 types d'infractions les plus commis par des blancs de plus de 65 ans, dans le quartier de Manhattan
+8. Afficher les 3 types d'infractions les plus commis par des noirs, âgés de 18 à 24 ans, dans le Bronx
+
+````{r,eval=TRUE, comment="...  ", warning=FALSE,include=FALSE}
+# Trouver le pourcentage de femmes arretees en 2017 et afficher la phrase "...% des criminels en 2017 sont des femmes"
+nOfInfraction <- nrow(dfFilter)
+nOfwoman <- nrow(dfFilter[which(dfFilter$SEX == "Femme"),])
+perWoman <-(nOfwoman/nOfInfraction)*100 
+cat(format(perWoman, digits = 3),'% des criminels en 2017 sont des femmes')
+
+# Afficher le nombre de vols (ROBBERY) entre le 15 décembre et le 31 décembre 2017
+robberyDec <- dfFilter[which(dfFilter$ARREST_DATE >= "2017-12-15" & dfFilter$ARREST_DATE <= "2017-12-31" & dfFilter$INFRACTION == "ROBBERY"),]
+
+# Afficher le quartier ayant connu le plus de vols entre le 15 et le 31 décembre 2017
+table(robberyDec$ARREST_QUARTIER)
+sort(table(robberyDec$ARREST_QUARTIER),decreasing = T)
+sort(table(robberyDec$ARREST_QUARTIER),decreasing = T)[1]
+
+# Afficher les 3 types d'infractions les plus commis 
+nOfInfraction <- table(dfFilter$INFRACTION) 
+nOfInfraction <- sort(nOfInfraction,decreasing = T)[1:3]
+nOfInfraction
+# head(nOfInfraction, n=3)
+
+# Afficher le nombre d'infractions commis par des blancs de plus de 65 ans
+nrow(dfFilter[which(dfFilter$RACE == "WHITE" & dfFilter$AGE_GROUPE == "65+"),])
+
+# Afficher le nombre d'infractions commis par des blancs de plus de 65 ans, dans le quartier de Manhattan
+nrow(dfFilter[which(dfFilter$RACE == "WHITE" & dfFilter$AGE_GROUPE == "65+" & dfFilter$ARREST_QUARTIER == "Manhattan"),])
+
+# Afficher les 3 types d'infractions les plus commis par des blancs de plus de 65 ans, dans le quartier de Manhattan
+sort(table(dfFilter[which(dfFilter$RACE == "WHITE" & dfFilter$AGE_GROUPE == "65+" & dfFilter$ARREST_QUARTIER == "Manhattan"),'INFRACTION']),decreasing = T)[1:3]
+
+# Afficher les 3 types d'infractions les plus commis par des noirs, âgés de 18 à 24 ans, dans le Bronx
+sort(table(dfFilter[which(dfFilter$RACE == "BLACK" & dfFilter$AGE_GROUPE == "18-24" & dfFilter$ARREST_QUARTIER == "Bronx"),'INFRACTION']),decreasing = T)[1:3]
+
+# Supprimer les variables inutiles pour la suite du script
+rm(robberyDec)
+````
+
+# Manipuler le tableau de données
+
+````{r,eval=TRUE, comment="...  ", warning=FALSE,include=TRUE}
+# Premiere methode, compter le  nombre  d'infractions selon les genres avec la fonction 'table'
+as.data.frame(table(dfFilter$SEX))
+
+# Seconde methode, compter le  nombre  d'infractions selon les genres avec la fonction 'aggregate'
+# Le parametre FUN de la fonction "aggregate" peut prendre plusieurs valeurs.
+# Valeurs possibles selon le type de données : lenght, mean, sum, median, min, max 
+df <- aggregate(INFRACTION ~ SEX, data = dfFilter, FUN = length)
+df
+````
+
+
+
+````{r,eval=TRUE, comment="...  ", warning=FALSE,include=TRUE}
+# La fonction "aggregate" permet d'affiner la requete en combinant plusieurs variables
+# Compter le  nombre d'infractions selon les genres et par quartier 
+dfSexeQuartier <- aggregate(INFRACTION ~ SEX + ARREST_QUARTIER, data = dfFilter, FUN = length)
+dfSexeQuartier
+dfSexeQuartier <- spread(dfSexeQuartier, key = SEX, value = INFRACTION)
+dfSexeQuartier
+````
+
+Le package "tidyr" a été développé pour manipuler et mettre en forme des tableaux de données. La fonction "spread" issue de ce package permet de créer nouvelles colonnes à partir des modalités d'une variable. 
+
+![https://garrettgman.github.io/tidying/](C:/GIT/R_FORMATION_DEBUTANT/images/spread.png)
+
+# Exercice
+
+1. Compter le  nombre d'infractions selon les classes d'âge et par quartier, fonction "aggregate".   
+2. Puis stocker le résultat dans un tableau nommé "dfAgeQuartier" 
+
+````{r,eval=TRUE, comment="...  ", warning=FALSE,include=FALSE}
+# Compter le  nombre d'infractions selon les classes d'âge et par quartier 
+dfAgeQuartier <- aggregate(INFRACTION ~ AGE_GROUPE + ARREST_QUARTIER, data = dfFilter, FUN = length)
+dfAgeQuartier <- spread(dfAgeQuartier, key = AGE_GROUPE, value = INFRACTION)
+````
+
+````{r,eval=TRUE, comment="...  ", warning=FALSE,include=TRUE}
+# Afficher les deux tables
+dfAgeQuartier
+dfSexeQuartier
+````
+
+# Réaliser une jointure attributaire
+
+````{r,eval=TRUE, comment="...  ", warning=FALSE,include=TRUE}
+# Joindre les deux tables
+df <- merge(dfSexeQuartier,dfAgeQuartier, by='ARREST_QUARTIER')
+df
+
+# Supprimer les variables inutiles pour la suite du script
+rm(dfAgeQuartier, dfSexeQuartier)
+````
+
+# Créer de la donnée
+## Requêter le jeu de données
+
+````{r,eval=TRUE, comment="...  ", warning=FALSE,include=TRUE}
+# Identifier le crime majoritaire pour chaque quartier 
+# Utilisation d'une boucle "For" pour itérer sur chaque quartier de New-York
+
+# Exemple sur le quartier de Manhattan
+# 1 ==> Selectionner tous les crimes pour Manhattan (Fonction "which")
+tmp <- dfFilter[which(dfFilter$ARREST_QUARTIER == "Manhattan"),]
+# 2 ==> Compter le nombre d'infraction par type (Fonction "table")
+tmp <- table(tmp$INFRACTION)
+# 3 ==> Trier le resultat par ordre decroissant (Fonction "sort") et ne garder que le nom du premier element du vecteur (Fonction "name"))
+tmp <- sort(tmp,decreasing = T)[1]
+names(tmp)
+
+# Chainer toutes les fonctions sur une meme ligne
+names(sort(table(dfFilter[which(dfFilter$ARREST_QUARTIER == "Manhattan"),"INFRACTION"]),decreasing = T)[1])
+````
+
+## Structure de contrôle de flux 
+
+L’une des tâches que les machines font le mieux est la répétition de tâches identiques sans erreur.   
+Sauf mentions explicites, les instructions d’un programme s’exécutent les unes après les autres, dans l’ordre où elles ont été écrites à l’intérieur du script.  
+On parle de séquence d’instructions ou flux d’exécution. Il existe également des constructions qui modifient le flux d’exécution, les boucles par exemple. Elles permettent de répéter une ou plusieurs instructions plusieurs fois. La boucle for permet de faire des itérations sur un élément, comme une chaîne de caractères ou une liste. 
+
+````{r,eval=TRUE, comment="...  ", warning=FALSE,include=TRUE}
+# Exercice simple pour comprendre le fonctionnement des boucles "For"
+# Afficher la liste des quartiers et le nombre d'elements dans la liste
+# 1. Obtenir la liste des quartiers new-yorkais
+listQuartier <- unique(dfFilter$ARREST_QUARTIER)
+listQuartier
+# 2. Afficher la longueur du vecteur
+length(listQuartier)
+
+# Iterer sur les elements (quartier) de la liste
+# Creation d'une variable iterative "quartier"
+# Elle prendra une nouvelle valeur a chaque itération
+# 5 iterations au total (longueur du vecteur "listQuartier")
+for(quartier in listQuartier){
+  # Fonction "match" pour identifier la position du quartier dans la liste
+  indexElem <- match(quartier, listQuartier)
+  # Afficher l'index et le nom du quartier a partir de la variable iterative
+  cat(indexElem, '+++',quartier,'\n')
+}
+
+# Iterer sur les quartiers et appliquer les fonctions vues precedemment  (cf. section 11.1)
+# Ajouter le resultat dans la table df
+# Creer une nouvelle colonne vide, sans valeurs
+df$Crime <- NULL
+
+# Iterer sur chaque quartier avec la boucle 'For'
+for(quartier in listQuartier){
+  # Afficher le nom du quartier
+  cat('+++',quartier,'\n')
+  # Identifier le crime principal du quartier
+  # /!\/!\Toutes les fonctions sont chainées sur une ligne/!\/!\
+  crime <- names(sort(table(dfFilter[which(dfFilter$ARREST_QUARTIER == quartier),"INFRACTION"]),decreasing = T)[1])
+  # Afficher le crime
+  cat('------',crime,'\n')
+  # Ajouter le crime dans la dataframe 'df'
+  df[which(df$ARREST_QUARTIER == quartier),"Crime"] <- crime
+}
+
+# Renommer la premiere colonne
+names(df)[1] <- "Quartiers"
+
+# Afficher la table mais seulement la colonne 'Quartiers' et 'Crime'
+df[,c('Quartiers','Crime')]
+
+# Creer de nouvelles colonnes
+# Calculer le total de crimes par quartier (somme des colonnes homme et femme)
+df$Total <- rowSums(df[, c('Femme','Homme')])
+
+# Calculer le pourcentage d'hommes et de femmes par quartier (deux méthodes)
+df$perFemme <- format((df$Femme/df$Total)*100, digits = 3)
+df[['perHomme']] <- format((df[['Homme']]/df[['Total']])*100, digits = 3)
+
+# Reorganiser les colonnes de la dataframe
+df <- df[, c("Quartiers","Femme","perFemme","Homme","perHomme","<18","18-24","25-44","45-64","65+","Total","Crime")]
+
+# Supprimer les variables inutiles pour la suite du script
+rm(crime, indexElem, listQuartier, quartier, tmp)
+````
+
+# Exercice  
+Objectif : Calculer la densité de population par quartier.  
+
+1. Créer un  tableau avec nombre d'habitants par quartiers (informations disponibles sur  https://www.citypopulation.de/en/usa/newyorkcity/ )  
+Commencer par un tableau "dfNY" contenant 2 colonnes : "quartiers" et "nbPop"  
+Pour les valeurs numériques, indiquer les chiffres sans ponctuation.  
+2. Ensuite, compléter le tableau avec les aires de chaque quartier.  
+3. Calculer la densité par km² dans une nouvelle colonne du tableau, "nbPop".  
+4. Joindre deux tableaux de données "dfNY" et "df".  
+5. Sauvegarder le fichier en .csv et .Rdata.  
+
+````{r,eval=TRUE, comment="...  ", warning=FALSE,include=FALSE}
+Quartiers <- c("Manhattan", "Staten Island" ,"Brooklyn", "Queens","Bronx")
+nbPop <- c(1628701, 476179, 2582830, 2278906, 1432132)
+dfNY <- data.frame(Quartiers, nbPop)
+aireKM2 <- c(58.7,151,181,282,109)
+dfNY$aireKM2 <- aireKM2
+dfNY$Density <- dfNY$nbPop / dfNY$aireKM2
+df <- merge(df, dfNY, by="Quartiers")
+write.csv2(df, file="NYPD_Arrests_Statistics_2017.csv")
+save(df, file="NYPD_Arrests_Statistics_2017.Rdata")
+````
+
+# Représentations graphiques
+
+````{r,eval=TRUE, comment="...  ", warning=FALSE,include=TRUE}
+# Diagramme en barre
+barplot(df$nbPop,
+        names.arg = df$Quartiers,
+        main = "Number of inhabitants by New York's districts",
+        xlab = "Neighborhoods",
+        ylab = "Number of inhabitants",
+        col = 'lightblue')
+
+
+# Sur le dataframe initial "dfFilter", faire un diagramme des groupes d'âge et des genres. 
+# Pour représenter la distribution d'une variable qualitative, on utilise un diagramme en barres (barplot). Il est nécessaire de compter le nombre d'occurences de chaque niveau par la fonction table.  
+barplot(table(dfFilter$AGE_GROUPE), 
+        names.arg = names(table(dfFilter$AGE_GROUPE)),
+        main = "Number of offenders by age group",
+        col = 'lightblue')
+
+barplot(table(dfFilter$SEX), 
+        names.arg = names(table(dfFilter$SEX)),
+        main = "Number of offenders by gender",
+        col = 'lightblue')
+````
+
+[1 - R et ses concepts](./index.html).
+[3 - Représenter des données](./representer.html).
