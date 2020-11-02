@@ -494,4 +494,5 @@ barplot(table(dfFilter$SEX),
 ````
 
 [1 - R et ses concepts](./index.html).
+
 [3 - Représenter des données](./representer.html).
