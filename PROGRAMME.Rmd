@@ -33,7 +33,7 @@ Cette formation de deux journées a un programme prévisionnel qui s’organise 
 
 ## Inscription à la formation :  
 
-Vous pouvez vous inscrire en cliquant sur le lien suivant : https:// enquetes.univ-rouen.fr/ 456439  
+Vous pouvez vous inscrire en cliquant sur le lien suivant : https://enquetes.univ-rouen.fr/685732  
 
 Date limite d’inscription (25 places) : 08/04/2022   
 
@@ -44,7 +44,7 @@ Date limite d’inscription (25 places) : 08/04/2022
 |----------------|-------------|-----------------------------------------------|---------------------------------------------|
 | Lundi 25 Avril | 09h00-12h30 | divisible Nord - Maison de l'Université       | Présentation de la formation, concepts de R |
 | Lundi 25 Avril | 14h00-17h00 | divisible Nord - Maison de l'Université       | Explorer la base de données                 |
-| Mardi 26 Avril | 09h00-12h30 | divisible Nord - Maison de l'Université       | Manipule et représenter des données         |
+| Mardi 26 Avril | 09h00-12h30 | divisible Nord - Maison de l'Université       | Manipuler et représenter des données        |
 | Mardi 26 Avril | 14h00-17h00 | divisible Nord - Maison de l'Université       | Traitements statistiques                    |
 
 ***  
